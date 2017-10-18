@@ -1,5 +1,14 @@
+import sys
 import pyfits
 import numpy as np
+from matplotlib import pyplot as plt
+
+
+def flatten(array, level=1):
+    """ Flattens array to given level """
+    for i in range(level):
+        array = [item for sublist in array for item in sublist]
+    return array
 
 
 def find_std(pixdata):
@@ -15,24 +24,41 @@ def get_centre_pixel(pixdata):
     return int(len(pixdata)/2), int(len(pixdata)/2)
 
 
-def get_pixel_neighbourhood(pixel, size):
+def get_pixel_neighbourhood(pixel, frame_size, binary_map):
     shifts = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-    new_coords = [map(sum, zip(shift, pixel)) for shift in shifts]
+    new_coords = [tuple(map(sum, zip(shift, pixel))) for shift in shifts]
+    # Make more elegant
+    new_coords = filter(lambda x: x[0] > 0 and x[0] < frame_size
+                        and x[1] > 0 and x[1] < frame_size, new_coords)
+    new_coords = filter(lambda p: np.isnan(binary_map[p]), new_coords)
     return new_coords
 
 if __name__ == '__main__':
     f = pyfits.open('data/1.fits')
     pixdata = f[0].data
-    print pixdata.shape
-    # pixdata = pixdata[:10, :10]
+    std = find_std(pixdata)
+    start_pixel = get_centre_pixel(pixdata)
+    frame_size = len(pixdata)
+    binary_map = np.full_like(pixdata, None)
 
-    print find_std(pixdata)
+    if pixdata[start_pixel] < std:
+        print "Initial pixel not hot"
+        sys.exit()
 
-    # print[map(tl, tr, bl, br
-    # print pixdata
-    # start_pixel = get_centre_pixel(pixdata)
-    # frame_size = len(pixdata)
-    # binary_map = np.full_like(pixdata, None)
+    binary_map[start_pixel] = 1
+    active_pix = get_pixel_neighbourhood(start_pixel, frame_size, binary_map)
 
-    # print binary_map
-    # print get_pixel_neighbourhood(start_pixel, frame_size)
+    while active_pix:
+        gen_pix = []
+        for pixel in active_pix:
+            if pixdata[pixel] > std:
+                binary_map[pixel] = 1
+                gen_pix += [pixel]
+            else:
+                binary_map[pixel] = 0
+        active_pix = \
+            set(flatten([get_pixel_neighbourhood(gen_pixel, frame_size, binary_map)
+                         for gen_pixel in gen_pix]))
+
+    plt.imshow(binary_map)
+    plt.savefig('fig.png')
