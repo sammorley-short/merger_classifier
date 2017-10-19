@@ -1,5 +1,6 @@
 import sys
 import pyfits
+import itertools as it
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -24,8 +25,9 @@ def get_centre_pixel(pixdata):
     return int(len(pixdata)/2), int(len(pixdata)/2)
 
 
-def get_pixel_neighbourhood(pixel, frame_size, binary_map):
-    shifts = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
+    shifts = it.product([0, 1, -1], [0, 1, -1])
+    shifts.next()
     new_coords = [tuple(map(sum, zip(shift, pixel))) for shift in shifts]
     # Make more elegant
     new_coords = filter(lambda x: x[0] > 0 and x[0] < frame_size
