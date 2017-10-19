@@ -15,6 +15,10 @@ def flatten(array, level=1):
 
 
 def find_std(pixdata):
+    """
+    Finds the standard deviation to use on contour map by finding std of
+    darkest corner
+    """
     frame_size = len(pixdata)
     tl = pixdata[:frame_size/10, :frame_size/10]
     tr = pixdata[-frame_size/10::, :frame_size/10]
@@ -24,6 +28,7 @@ def find_std(pixdata):
 
 
 def get_centre_pixel(pixdata):
+    """ Gets the central pixel to start CA from """
     return int(len(pixdata)/2), int(len(pixdata)/2)
 
 
@@ -31,7 +36,7 @@ def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
     shifts = it.product([0, 1, -1], [0, 1, -1])
     shifts.next()
     new_coords = [tuple(map(sum, zip(shift, pixel))) for shift in shifts]
-    # Make more elegant
+    # TODO: Make below more elegant
     new_coords = filter(lambda x: x[0] > 0 and x[0] < frame_size
                         and x[1] > 0 and x[1] < frame_size, new_coords)
     if threshold is None:
@@ -42,6 +47,9 @@ def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
 
 
 def build_contour_map(pixdata, levels):
+    """
+    Builds contour map with given number of levels from input pixel data
+    """
     std = find_std(pixdata)
     start_pixel = get_centre_pixel(pixdata)
     frame_size = len(pixdata)
