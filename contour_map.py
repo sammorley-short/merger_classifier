@@ -1,3 +1,5 @@
+import csv
+import os.path
 import sys
 import pyfits
 import itertools as it
@@ -75,12 +77,27 @@ def build_contour_map(pixdata, levels):
     return final_map
 
 if __name__ == '__main__':
-    f = pyfits.open('data/1.fits')
-    pixdata = f[0].data
-    levels = 3
+    data_subdir = 'data'
+    fits_data_subdir = 'fits'
+    img_data_subdir = 'imgs'
 
-    final_map = build_contour_map(pixdata, levels)
+    levels = 5
 
-    plt.imshow(final_map)
-    plt.colorbar()
-    plt.savefig('fig.png')
+    userhome = os.path.expanduser('~')
+    cwd = os.getcwd()
+    fits_data_dir = os.path.join(cwd, data_subdir, fits_data_subdir)
+    img_data_dir = os.path.join(cwd, data_subdir, img_data_subdir)
+    for root, dirs, files in os.walk(fits_data_dir):
+        for file in files:
+            if file.endswith(".fits"):
+                print file
+                file_no = file[:-5]
+                f = pyfits.open(os.path.join(root, file))
+                pixdata = f[0].data
+                final_map = build_contour_map(pixdata, levels)
+                plt.imshow(final_map)
+                plt.colorbar()
+                img_file = file_no + '.png'
+                plt.savefig(os.path.join(img_data_dir, img_file))
+                plt.close()
+                f.close()
