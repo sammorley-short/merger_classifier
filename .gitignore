@@ -1,3 +1,5 @@
 *.fits
 *.png
 
+*.sublime-project
+*.sublime-workspace
