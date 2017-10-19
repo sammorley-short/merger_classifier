@@ -38,55 +38,49 @@ def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
         new_coords = filter(lambda p: binary_map[p] > threshold, new_coords)
     return new_coords
 
-if __name__ == '__main__':
-    f = pyfits.open('data/1.fits')
-    pixdata = f[0].data
+
+def build_contour_map(pixdata, levels):
     std = find_std(pixdata)
     start_pixel = get_centre_pixel(pixdata)
     frame_size = len(pixdata)
-    binary_map = np.full_like(pixdata, None)
+    contour_runs = [[np.full_like(pixdata, None), i * std]
+                    for i in range(1, levels + 1)]
 
-    if pixdata[start_pixel] < std:
-        print "Initial pixel not hot"
-        sys.exit()
+    binary_maps = []
+    for binary_map, threshold in contour_runs:
 
-    binary_map[start_pixel] = 1
-    active_pix = get_pixel_neighbourhood(start_pixel, frame_size, binary_map)
+        if pixdata[start_pixel] < threshold:
+            print "Initial pixel not hot"
+            return np.full_like(pixdata, None)
 
-    while active_pix:
-        gen_pix = []
-        for pixel in active_pix:
-            if pixdata[pixel] > std:
-                binary_map[pixel] = 1
-                gen_pix += [pixel]
-            else:
-                binary_map[pixel] = 0
-        active_pix = \
-            set(flatten([get_pixel_neighbourhood(gen_pixel, frame_size, binary_map)
-                         for gen_pixel in gen_pix]))
+        binary_map[start_pixel] = 1
+        active_pix = get_pixel_neighbourhood(
+            start_pixel, frame_size, binary_map)
 
-    # for i in [1]:
-    #     new_std = (i + 1) * std
+        while active_pix:
+            gen_pix = []
+            for pixel in active_pix:
+                if pixdata[pixel] > threshold:
+                    binary_map[pixel] = 1
+                    gen_pix += [pixel]
+                else:
+                    binary_map[pixel] = 0
+            active_pix = \
+                set(flatten([get_pixel_neighbourhood(gen_pixel, frame_size, binary_map)
+                             for gen_pixel in gen_pix]))
+        binary_maps += [np.nan_to_num(binary_map)]
 
-    #     binary_map[start_pixel] = i + 1
-    #     active_pix = \
-    #         get_pixel_neighbourhood(start_pixel, frame_size, binary_map)
+    final_map = reduce(np.add, binary_maps)
 
-    #     while active_pix:
-    #         gen_pix = []
-    #         for pixel in active_pix:
-    #             if pixdata[pixel] > new_std:
-    #                 binary_map[pixel] = i + 1
-    #                 gen_pix += [pixel]
-    #             else:
-    #                 binary_map[pixel] = i
-    #         active_pix = \
-    #             set(flatten([get_pixel_neighbourhood(gen_pixel, frame_size,
-    #                                                  binary_map, i)
-    #                          for gen_pixel in gen_pix]))
+    return final_map
 
-    print np.unique(binary_map)
+if __name__ == '__main__':
+    f = pyfits.open('data/1.fits')
+    pixdata = f[0].data
+    levels = 3
 
-    plt.imshow(binary_map)
+    final_map = build_contour_map(pixdata, levels)
+
+    plt.imshow(final_map)
     plt.colorbar()
     plt.savefig('fig.png')
