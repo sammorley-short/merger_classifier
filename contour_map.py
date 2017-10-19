@@ -32,7 +32,10 @@ def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
     # Make more elegant
     new_coords = filter(lambda x: x[0] > 0 and x[0] < frame_size
                         and x[1] > 0 and x[1] < frame_size, new_coords)
-    new_coords = filter(lambda p: np.isnan(binary_map[p]), new_coords)
+    if threshold is None:
+        new_coords = filter(lambda p: np.isnan(binary_map[p]), new_coords)
+    else:
+        new_coords = filter(lambda p: binary_map[p] > threshold, new_coords)
     return new_coords
 
 if __name__ == '__main__':
@@ -62,5 +65,28 @@ if __name__ == '__main__':
             set(flatten([get_pixel_neighbourhood(gen_pixel, frame_size, binary_map)
                          for gen_pixel in gen_pix]))
 
+    # for i in [1]:
+    #     new_std = (i + 1) * std
+
+    #     binary_map[start_pixel] = i + 1
+    #     active_pix = \
+    #         get_pixel_neighbourhood(start_pixel, frame_size, binary_map)
+
+    #     while active_pix:
+    #         gen_pix = []
+    #         for pixel in active_pix:
+    #             if pixdata[pixel] > new_std:
+    #                 binary_map[pixel] = i + 1
+    #                 gen_pix += [pixel]
+    #             else:
+    #                 binary_map[pixel] = i
+    #         active_pix = \
+    #             set(flatten([get_pixel_neighbourhood(gen_pixel, frame_size,
+    #                                                  binary_map, i)
+    #                          for gen_pixel in gen_pix]))
+
+    print np.unique(binary_map)
+
     plt.imshow(binary_map)
+    plt.colorbar()
     plt.savefig('fig.png')
