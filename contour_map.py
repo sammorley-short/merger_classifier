@@ -99,20 +99,25 @@ def build_contour_map(pixdata, levels=1):
 def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels):
     """
     Applies bitmap to multiple fits files in directory and outputs images to
-    another subdirectory
+    another subdirectory. Writes pngs with same name as fits file
     """
+    # Builds os-specific directory addresses
     userhome = os.path.expanduser('~')
     cwd = os.getcwd()
     fits_data_dir = os.path.join(cwd, main_dir, fits_subdir)
     img_data_dir = os.path.join(cwd, main_dir, img_subdir)
+    # Walks over files in fits directory
     for root, dirs, files in os.walk(fits_data_dir):
         for file in files:
             if file.endswith(".fits"):
-                print file
+                print "Processing %s" % (file)
                 file_no = file[:-5]
+                # Opens file and gets pixel data
                 f = pyfits.open(os.path.join(root, file))
                 pixdata = f[0].data
+                # Builds contour map
                 final_map = build_contour_map(pixdata, levels)
+                # Plots image and saves
                 plt.imshow(final_map)
                 plt.colorbar()
                 img_file = file_no + '.png'
