@@ -35,6 +35,7 @@ def get_centre_pixel(pixdata):
 def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
     shifts = it.product([0, 1, -1], [0, 1, -1])
     shifts.next()
+    shifts = [(1, 0), (-1, 0), (0, 1), (0, -1)]
     new_coords = [tuple(map(sum, zip(shift, pixel))) for shift in shifts]
     # TODO: Make below more elegant
     new_coords = filter(lambda x: x[0] > 0 and x[0] < frame_size
