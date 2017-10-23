@@ -32,7 +32,7 @@ def get_centre_pixel(pixdata):
     return int(len(pixdata)/2), int(len(pixdata)/2)
 
 
-def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
+def get_pixel_neighbourhood(pixel, frame_size, binary_map):
     shifts = it.product([0, 1, -1], [0, 1, -1])
     shifts.next()
     shifts = [(1, 0), (-1, 0), (0, 1), (0, -1)]
@@ -40,10 +40,7 @@ def get_pixel_neighbourhood(pixel, frame_size, binary_map, threshold=None):
     # TODO: Make below more elegant
     new_coords = filter(lambda x: x[0] > 0 and x[0] < frame_size
                         and x[1] > 0 and x[1] < frame_size, new_coords)
-    if threshold is None:
-        new_coords = filter(lambda p: np.isnan(binary_map[p]), new_coords)
-    else:
-        new_coords = filter(lambda p: binary_map[p] > threshold, new_coords)
+    new_coords = filter(lambda p: np.isnan(binary_map[p]), new_coords)
     return new_coords
 
 
@@ -58,29 +55,29 @@ def build_contour_map(pixdata, levels=1):
     std = find_std(pixdata)
     start_pixel = get_centre_pixel(pixdata)
     frame_size = len(pixdata)
-    # Provides a blank bitmap for each run
-    contour_runs = [[np.full_like(pixdata, None), i * std]
-                    for i in contours]
     # For each contour level builds bitmap
     binary_maps = []
-    for binary_map, threshold in contour_runs:
+    for i, contour in enumerate(contours):
+        # Provides a blank bitmap for each run
+        binary_map = np.full_like(pixdata, None)
         # If first pixel not bright enough, sets bitmap to blank canvas
-        if pixdata[start_pixel] < threshold:
-            print "Initial pixel not hot enough (< %f)" % (threshold)
+        if pixdata[start_pixel] < (contour * std):
+            print "Initial pixel not hot enough (< %f)" % (contour)
             binary_maps += [np.full_like(pixdata, 0)]
             break
-        binary_map[start_pixel] = 1
+        increment = contour - contours[i-1] if i > 0 else contour
+        binary_map[start_pixel] = increment
         # Gets initial set of starter pixels
         active_pix = \
             get_pixel_neighbourhood(start_pixel, frame_size, binary_map)
         # While active pixels exist, keep searching
         while active_pix:
-            # Tracks pixels that are found above threshold this round
+            # Tracks pixels that are found above contour this round
             gen_pix = []
-            # If pixel below threshold, set to 0, else 1 and add to gen pixels
+            # If pixel below contour, set to 0, else 1 and add to gen pixels
             for pixel in active_pix:
-                if pixdata[pixel] > threshold:
-                    binary_map[pixel] = 1
+                if pixdata[pixel] > (contour * std):
+                    binary_map[pixel] = increment
                     gen_pix += [pixel]
                 else:
                     binary_map[pixel] = 0
@@ -96,7 +93,7 @@ def build_contour_map(pixdata, levels=1):
     return final_map
 
 
-def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels):
+def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, bm_subdir, levels):
     """
     Applies bitmap to multiple fits files in directory and outputs images to
     another subdirectory. Writes pngs with same name as fits file
@@ -106,6 +103,7 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels):
     cwd = os.getcwd()
     fits_data_dir = os.path.join(cwd, main_dir, fits_subdir)
     img_data_dir = os.path.join(cwd, main_dir, img_subdir)
+    bm_data_dir = os.path.join(cwd, main_dir, bm_subdir)
     # Walks over files in fits directory
     for root, dirs, files in os.walk(fits_data_dir):
         for file in files:
@@ -117,6 +115,12 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels):
                 pixdata = f[0].data
                 # Builds contour map
                 final_map = build_contour_map(pixdata, levels)
+                final_map = final_map.astype(int)
+                # print np.unique(final_map)
+                # Saves bitmap
+                bm_file = file_no + '.csv'
+                np.savetxt(os.path.join(bm_data_dir, bm_file),
+                           final_map, fmt='%d', delimiter=",")
                 # Plots image and saves
                 plt.imshow(final_map)
                 plt.colorbar()
@@ -130,7 +134,8 @@ if __name__ == '__main__':
     main_dir = 'data'
     fits_subdir = 'fits'
     img_subdir = 'imgs'
+    bm_subdir = 'bitmaps'
 
-    levels = [1, 10, 100]
+    levels = [1, 5, 10]
 
-    batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels)
+    batch_apply_bitmap(main_dir, fits_subdir, img_subdir, bm_subdir, levels)
