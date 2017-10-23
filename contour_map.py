@@ -95,17 +95,16 @@ def build_contour_map(pixdata, levels=1):
     final_map = reduce(np.add, binary_maps)
     return final_map
 
-if __name__ == '__main__':
-    data_subdir = 'data'
-    fits_data_subdir = 'fits'
-    img_data_subdir = 'imgs'
 
-    levels = [1, 10, 100]
-
+def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels):
+    """
+    Applies bitmap to multiple fits files in directory and outputs images to
+    another subdirectory
+    """
     userhome = os.path.expanduser('~')
     cwd = os.getcwd()
-    fits_data_dir = os.path.join(cwd, data_subdir, fits_data_subdir)
-    img_data_dir = os.path.join(cwd, data_subdir, img_data_subdir)
+    fits_data_dir = os.path.join(cwd, main_dir, fits_subdir)
+    img_data_dir = os.path.join(cwd, main_dir, img_subdir)
     for root, dirs, files in os.walk(fits_data_dir):
         for file in files:
             if file.endswith(".fits"):
@@ -120,3 +119,13 @@ if __name__ == '__main__':
                 plt.savefig(os.path.join(img_data_dir, img_file))
                 plt.close()
                 f.close()
+
+
+if __name__ == '__main__':
+    main_dir = 'data'
+    fits_subdir = 'fits'
+    img_subdir = 'imgs'
+
+    levels = [1, 10, 100]
+
+    batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels)
