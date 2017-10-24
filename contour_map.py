@@ -2,6 +2,7 @@ import csv
 import os.path
 import sys
 import pyfits
+import matplotlib
 import itertools as it
 import numpy as np
 from matplotlib import pyplot as plt
@@ -75,14 +76,15 @@ def build_contour_map(pixdata, levels=1, grid_res=10):
             while active_pix:
                 # Tracks pixels that are found above contour this round
                 gen_pix = []
-                # If pixel below contour, set to 0, else 1 and add to gen
-                # pixels
+                # If pixel below contour, set to 0, else 1
                 for pixel in active_pix:
                     if pixdata[pixel] > (contour * std):
                         binary_map[pixel] = increment
+                        # Add pixel to neighbourhood generating pixels
                         gen_pix += [pixel]
                     else:
                         binary_map[pixel] = 0
+                        # If pixel was a starting pixel, remove it from grid
                         if pixel in pixel_grid:
                             pixel_grid.remove(pixel)
                 # Gets next set of active pixels from gen pixels
@@ -92,6 +94,7 @@ def build_contour_map(pixdata, levels=1, grid_res=10):
                                  for gen_pixel in gen_pix]))
         # Saves bitmap
         binary_maps += [np.nan_to_num(binary_map)]
+        # If bitmap was empty, end contour search
         if len(np.unique(binary_maps[-1])) == 1:
             print "No region of > %d * std found" % contour
             break
@@ -100,7 +103,8 @@ def build_contour_map(pixdata, levels=1, grid_res=10):
     return final_map
 
 
-def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, bm_subdir, levels,
+def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
+                       csv_subdir=None, img_format='jpg',
                        intesity_map=lambda x: x):
     """
     Applies bitmap to multiple fits files in directory and outputs images to
@@ -111,7 +115,8 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, bm_subdir, levels,
     cwd = os.getcwd()
     fits_data_dir = os.path.join(cwd, main_dir, fits_subdir)
     img_data_dir = os.path.join(cwd, main_dir, img_subdir)
-    bm_data_dir = os.path.join(cwd, main_dir, bm_subdir)
+    csv_data_dir = os.path.join(
+        cwd, main_dir, csv_subdir) if csv_subdir else None
     # Walks over files in fits directory
     for root, dirs, files in os.walk(fits_data_dir):
         for file in files:
@@ -126,26 +131,25 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, bm_subdir, levels,
                 final_map = intesity_map(final_map)
                 final_map = final_map.astype(int)
                 # print np.unique(final_map)
-                # Saves bitmap
-                bm_file = file_no + '.csv'
-                np.savetxt(os.path.join(bm_data_dir, bm_file),
-                           final_map, fmt='%d', delimiter=",")
+                # Saves to csv bitmap
+                if csv_data_dir:
+                    bm_file = file_no + '.csv'
+                    np.savetxt(os.path.join(csv_data_dir, bm_file),
+                               final_map, fmt='%d', delimiter=",")
                 # Plots image and saves
-                plt.imshow(final_map)
-                plt.colorbar()
-                img_file = file_no + '.png'
-                plt.savefig(os.path.join(img_data_dir, img_file))
-                plt.close()
-                f.close()
+                img_file = file_no + '.' + img_format
+                matplotlib.image.imsave(os.path.join(img_data_dir, img_file),
+                                        final_map, format=img_format)
 
 
 if __name__ == '__main__':
     main_dir = 'data'
     fits_subdir = 'fits'
     img_subdir = 'imgs'
-    bm_subdir = 'bitmaps'
+    csv_subdir = 'csv'
+    img_format = 'jpg'
 
     levels = [1, 5, 10, 50, 100, 200, 500, 1000, 1500, 2000]
 
-    batch_apply_bitmap(main_dir, fits_subdir, img_subdir, bm_subdir, levels,
-                       intesity_map=lambda x: x ** 0.5)
+    batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
+                       csv_subdir=csv_subdir, img_format=img_format)
