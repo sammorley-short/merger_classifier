@@ -5,7 +5,8 @@ import pyfits
 import matplotlib
 import itertools as it
 import numpy as np
-from matplotlib import pyplot as plt
+from PIL import Image
+from matplotlib import cm
 
 
 def flatten(array, level=1):
@@ -129,7 +130,9 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
                 # Builds contour map
                 final_map = build_contour_map(pixdata, levels)
                 final_map = intesity_map(final_map)
-                final_map = final_map.astype(int)
+                # final_map = final_map.astype(int)
+                # Normalize bitmap
+                final_map *= 255.0/np.max(final_map)
                 # print np.unique(final_map)
                 # Saves to csv bitmap
                 if csv_data_dir:
@@ -138,18 +141,21 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
                                final_map, fmt='%d', delimiter=",")
                 # Plots image and saves
                 img_file = file_no + '.' + img_format
-                matplotlib.image.imsave(os.path.join(img_data_dir, img_file),
-                                        final_map, format=img_format)
+                img = Image.fromarray(final_map.astype(np.uint8))
+                img.save(os.path.join(img_data_dir, img_file))
+                # img.show()
+                # image.imsave(os.path.join(img_data_dir, img_file),
+                #              final_map, format=img_format,
+                #              cmap=cm.Greys)
 
 
 if __name__ == '__main__':
     main_dir = 'data'
     fits_subdir = 'fits'
     img_subdir = 'imgs'
-    csv_subdir = 'csv'
-    img_format = 'jpg'
+    img_format = 'png'
 
     levels = [1, 5, 10, 50, 100, 200, 500, 1000, 1500, 2000]
 
     batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
-                       csv_subdir=csv_subdir, img_format=img_format)
+                       img_format=img_format)
