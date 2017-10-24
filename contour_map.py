@@ -1,12 +1,8 @@
-import csv
 import os.path
-import sys
 import pyfits
-import matplotlib
 import itertools as it
 import numpy as np
 from PIL import Image
-from matplotlib import cm
 
 
 def flatten(array, level=1):
@@ -105,8 +101,7 @@ def build_contour_map(pixdata, levels=1, grid_res=10):
 
 
 def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
-                       csv_subdir=None, img_format='jpg',
-                       intesity_map=lambda x: x):
+                       img_format='jpg', intesity_map=lambda x: x):
     """
     Applies bitmap to multiple fits files in directory and outputs images to
     another subdirectory. Writes pngs with same name as fits file
@@ -116,8 +111,6 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
     cwd = os.getcwd()
     fits_data_dir = os.path.join(cwd, main_dir, fits_subdir)
     img_data_dir = os.path.join(cwd, main_dir, img_subdir)
-    csv_data_dir = os.path.join(
-        cwd, main_dir, csv_subdir) if csv_subdir else None
     # Walks over files in fits directory
     for root, dirs, files in os.walk(fits_data_dir):
         for file in files:
@@ -127,26 +120,15 @@ def batch_apply_bitmap(main_dir, fits_subdir, img_subdir, levels,
                 # Opens file and gets pixel data
                 f = pyfits.open(os.path.join(root, file))
                 pixdata = f[0].data
-                # Builds contour map
+                # Builds and normalizes contour map
                 final_map = build_contour_map(pixdata, levels)
                 final_map = intesity_map(final_map)
-                # final_map = final_map.astype(int)
-                # Normalize bitmap
                 final_map *= 255.0/np.max(final_map)
                 # print np.unique(final_map)
-                # Saves to csv bitmap
-                if csv_data_dir:
-                    bm_file = file_no + '.csv'
-                    np.savetxt(os.path.join(csv_data_dir, bm_file),
-                               final_map, fmt='%d', delimiter=",")
                 # Plots image and saves
                 img_file = file_no + '.' + img_format
                 img = Image.fromarray(final_map.astype(np.uint8))
                 img.save(os.path.join(img_data_dir, img_file))
-                # img.show()
-                # image.imsave(os.path.join(img_data_dir, img_file),
-                #              final_map, format=img_format,
-                #              cmap=cm.Greys)
 
 
 if __name__ == '__main__':
